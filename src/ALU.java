@@ -198,8 +198,54 @@ public class ALU {
 	 */
 	public String floatTrueValue (String operand, int eLength, int sLength) {
 		// TODO YOUR CODE HERE.
+		char c = operand.charAt(0);
+		String symbol = "";
+		if(c=='1')
+			symbol = "-";
 		
-		return null;
+		//无符号位
+		String exponentStr = operand.substring(1,eLength+1);
+		int exponent = 0;
+		for(int i=0;i<exponentStr.length();i++)
+			exponent = exponent * 2 + (exponentStr.charAt(i)-'0'); 
+		
+		// 求出尾数位及其表示的值
+		String significandStr = operand.substring(eLength+1,eLength+sLength+1);
+		int significandResult = 0;
+		for(int i=0;i<significandStr.length();i++)
+			significandResult = significandResult * 2 + (significandStr.charAt(i)-48);
+		double f = significandResult / Math.pow(2, sLength);
+		
+		if(exponent==0){
+			// 正负0的情况
+			if(f == 0.0){
+				return symbol + "0";
+			}
+			// 正负反规格化数的情况
+			else{
+				int exponentReal = (int)(exponent - (Math.pow(2, eLength-1)-1));
+				return symbol + (f * Math.pow(2, exponentReal));
+			}
+		}
+		
+		else if(exponent==Math.pow(2, eLength)-1){
+			// 6.3.2（1）正负无穷大的情况
+			if(f == 0.0){
+				if(symbol.equals("-"))
+					return  "-Inf";
+				else
+					return "+Inf";//必须有正号
+			}
+			//6.3.2（2）非数或通知式非数的情况
+			else{
+				return "NaN";
+			}
+		}
+		
+		else{
+			int exponentReal = (int)(exponent - (Math.pow(2, eLength-1)-1));
+			return symbol + ((f+1) * Math.pow(2, exponentReal));
+		}
 	}
 	
 	/**
@@ -500,6 +546,14 @@ public class ALU {
 	 */
 	public String signedAddition (String operand1, String operand2, int length) {
 		// TODO YOUR CODE HERE.
+		String result = "";
+		if(operand1.charAt(0)=='0'&&operand2.charAt(0)=='0'){
+			result = integerAddition(operand1,operand2,length);
+			return result.charAt(0)+"0"+result.substring(1);
+		}else if(operand1.charAt(0)=='1'&&operand2.charAt(0)=='0'){
+			result = integerAddition(operand2,"0"+operand1.substring(1),length);
+			return result.charAt(0)+result.charAt(1)+result.substring(1);
+		}
 		return null;
 	}
 	
