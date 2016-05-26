@@ -340,7 +340,7 @@ public class ALU {
 	}
 	
 	/**
-	 * 4位先行进位加法器。<br/>
+	 * 4位先行进位加法器。要求采用{@link #fullAdder(char, char, char) fullAdder}来实现<br/>
 	 * 例：claAdder("1001", "0001", '1')
 	 * @param operand1 4位二进制表示的被加数
 	 * @param operand2 4位二进制表示的加数
@@ -355,9 +355,10 @@ public class ALU {
 		int[] C = new int[5];
 		for(int i =0;i<operand1.length();i++){
 			//算出Pi
-			P[i] = (operand1.charAt(operand1.length()-1-i)-'0')|(operand2.charAt(operand1.length()-1-i)-'0');
+			P[i] = fullAdder(operand1.charAt(operand1.length()-1-i),operand2.charAt(operand1.length()-1-i),'1').charAt(0)-'0';
+			//System.out.println(P[i]);
 			//算出Gi
-			G[i] = (operand1.charAt(operand1.length()-1-i)-'0')&(operand2.charAt(operand1.length()-1-i)-'0');
+			G[i] = fullAdder(operand1.charAt(operand1.length()-1-i),operand2.charAt(operand1.length()-1-i),'0').charAt(0)-'0';
 		}
 		
 		C[0] = (int)(c - '0');
@@ -385,7 +386,11 @@ public class ALU {
 	
 	/**
 	 * 加一器，实现操作数加1的运算。
-	 * 需要模拟{@link #fullAdder(char, char, char) fullAdder}来实现，但不可以调用{@link #fullAdder(char, char, char) fullAdder}。<br/>
+	 * 需要采用与门、或门、异或门等模拟，
+	 * 不可以直接调用{@link #fullAdder(char, char, char) fullAdder}、
+	 * {@link #claAdder(String, String, char) claAdder}、
+	 * {@link #adder(String, String, char, int) adder}、
+	 * {@link #integerAddition(String, String, int) integerAddition}方法。<br/>
 	 * 例：oneAdder("00001001")
 	 * @param operand 二进制补码表示的操作数
 	 * @return operand加1的结果，长度为operand的长度加1，其中第1位指示是否溢出（溢出为1，否则为0），其余位为相加结果
@@ -405,14 +410,15 @@ public class ALU {
 	}
 	
 	/**
-	 * 整数加法，要求调用{@link #claAdder(String, String, char) claAdder}方法实现。<br/>
-	 * 例：integerAddition("0100", "0011", 8)
+	 * 加法器，要求调用{@link #claAdder(String, String, char)}方法实现。<br/>
+	 * 例：adder("0100", "0011", ‘0’, 8)
 	 * @param operand1 二进制补码表示的被加数
 	 * @param operand2 二进制补码表示的加数
+	 * @param c 最低位进位
 	 * @param length 存放操作数的寄存器的长度，为4的倍数。length不小于操作数的长度，当某个操作数的长度小于length时，需要在高位补符号位
 	 * @return 长度为length+1的字符串表示的计算结果，其中第1位指示是否溢出（溢出为1，否则为0），后length位是相加结果
 	 */
-	public String integerAddition (String operand1, String operand2, int length) {
+	public String adder (String operand1, String operand2, char c, int length) {
 		// TODO YOUR CODE HERE.
 		String formal1 = operand1;
 		String formal2 = operand2;
@@ -426,7 +432,6 @@ public class ALU {
 			formal2 = operand2.charAt(0)+formal2;
 		}
 		
-		char c = '0';
 		for(int i = 0;i<length/4;i++){
 			result = claAdder(formal1.substring(length-4*i-4,length-4*i),formal2.substring(length-4*i-4,length-4*i),c)+result;
 			c = result.charAt(0);
@@ -440,6 +445,20 @@ public class ALU {
 	}
 	
 	/**
+	 * 整数加法，要求调用{@link #adder(String, String, char, int) adder}方法实现。<br/>
+	 * 例：integerAddition("0100", "0011", 8)
+	 * @param operand1 二进制补码表示的被加数
+	 * @param operand2 二进制补码表示的加数
+	 * @param length 存放操作数的寄存器的长度，为4的倍数。length不小于操作数的长度，当某个操作数的长度小于length时，需要在高位补符号位
+	 * @return 长度为length+1的字符串表示的计算结果，其中第1位指示是否溢出（溢出为1，否则为0），后length位是相加结果
+	 */
+	public String integerAddition (String operand1, String operand2, int length) {
+		// TODO YOUR CODE HERE.
+		return adder(operand1,operand2,'0',length);
+		
+	}
+	
+	/**
 	 * 整数减法，可调用{@link #integerAddition(String, String, char, int) integerAddition}方法实现。<br/>
 	 * 例：integerSubtraction("0100", "0011", 8)
 	 * @param operand1 二进制补码表示的被减数
@@ -449,29 +468,9 @@ public class ALU {
 	 */
 	public String integerSubtraction (String operand1, String operand2, int length) {
 		// TODO YOUR CODE HERE.
-		String formal1 = operand1;
-		String formal2 = negation(operand2);
-		String result = "";
-		
-		for(int i = 0;i<length-operand1.length();i++){
-			formal1 = operand1.charAt(0)+formal1;
-		}
-		
-		for(int i = 0;i<length-operand2.length();i++){
-			formal2 = operand2.charAt(0)+formal2;
-		}
-		
-		char c = '1';
-		for(int i = 0;i<length/4;i++){
-			result = claAdder(formal1.substring(length-4*i-4,length-4*i),formal2.substring(length-4*i-4,length-4*i),c)+result;
-			c = result.charAt(0);
-			result = result.substring(1);
-		}
-		
-		char overflow = '0';
-		overflow = (char) (overflow+(('1'-result.charAt(0))&(formal1.charAt(0)-'0')&(formal2.charAt(0)-'0')|(result.charAt(0)-'0')&('1'-formal1.charAt(0))&('1'-formal2.charAt(0)-'0')));
-		
-		return overflow+result;
+		String oppoOperand2 = negation(operand2);   //oppoOperand2只是operand的取反，还未加1，所以需要在进位中去“加上”那个1
+		String result = adder(operand1, oppoOperand2, '1', length);
+		return result;
 	}
 	
 	/**
@@ -532,7 +531,56 @@ public class ALU {
 	 */
 	public String integerDivision (String operand1, String operand2, int length) {
 		// TODO YOUR CODE HERE.
-		return null;
+		String rAndq = operand1;
+		for(int i = 0;i<length*2-operand1.length();i++){
+			rAndq = operand1.charAt(0)+rAndq;
+		}//扩展出2n位，存在余数寄存器和商寄存器中
+//		System.out.println(rAndq);
+		
+		for(int i = 0;i<length;i++){
+			//如果余数寄存器中的数与除数符号相同，做减法
+			if(rAndq.charAt(0)==operand2.charAt(0)){
+				rAndq = integerSubtraction(rAndq.substring(0,length), operand2, length).substring(1)+rAndq.substring(length);
+			}else{
+				rAndq = integerAddition(rAndq.substring(0,length), operand2, length).substring(1)+rAndq.substring(length);
+			}
+			
+			if(rAndq.charAt(0)==operand2.charAt(0)){
+				rAndq = rAndq.substring(1)+"1";
+			}else{
+				rAndq = rAndq.substring(1)+"0";				
+			}
+		}
+		
+		System.out.println(rAndq);
+		
+		if(rAndq.charAt(0)==operand2.charAt(0)){
+			rAndq = integerSubtraction(rAndq.substring(0,length), operand2, length).substring(1)+rAndq.substring(length);
+		}else{
+			rAndq = integerAddition(rAndq.substring(0,length), operand2, length).substring(1)+rAndq.substring(length);
+		}
+		
+		String quotient = rAndq.substring(length);
+		String reminder = rAndq.substring(0,length);		
+		
+		if(reminder.charAt(0)==operand2.charAt(0)){
+			reminder = integerSubtraction(reminder,operand2,length).substring(1);
+			quotient = quotient.substring(1)+"1";
+		}else{
+			reminder = integerAddition(reminder,operand2,length).substring(1);
+			quotient = quotient.substring(1)+"0";
+			System.out.println(reminder);
+		}
+		
+		//如果商和除数符号相反，商加1
+		if(quotient.charAt(0)!=operand2.charAt(0)){	
+			quotient = oneAdder(quotient).substring(1);
+		}
+		
+//		System.out.println(quotient);
+
+		//溢出位+商+余数
+		return quotient+reminder;
 	}
 	
 	/**
@@ -558,7 +606,7 @@ public class ALU {
 	}
 	
 	/**
-	 * 浮点数加法，可调用{@link #integerAddition(String, String, char, int) intergerAddition}等方法实现。<br/>
+	 * 浮点数加法，可调用{@link #signedAddition(String, String, int) signedAddition}等方法实现。<br/>
 	 * 例：floatAddition("00111111010100000", "00111111001000000", 8, 8, 8)
 	 * @param operand1 二进制表示的被加数
 	 * @param operand2 二进制表示的加数
@@ -588,7 +636,7 @@ public class ALU {
 	}
 	
 	/**
-	 * 浮点数乘法，可调用{@link #integerAddition(String, String, char, int) integerAddition}等方法实现。<br/>
+	 * 浮点数乘法，可调用{@link #integerMultiplication(String, String, int) integerMultiplication}等方法实现。<br/>
 	 * 例：floatMultiplication("00111110111000000", "00111111000000000", 8, 8)
 	 * @param operand1 二进制表示的被乘数
 	 * @param operand2 二进制表示的乘数
@@ -602,7 +650,7 @@ public class ALU {
 	}
 	
 	/**
-	 * 浮点数除法，可调用{@link #integerAddition(String, String, char, int) integerAddition}等方法实现。<br/>
+	 * 浮点数除法，可调用{@link #integerDivision(String, String, int) integerDivision}等方法实现。<br/>
 	 * 例：floatDivision("00111110111000000", "00111111000000000", 8, 8)
 	 * @param operand1 二进制表示的被除数
 	 * @param operand2 二进制表示的除数
