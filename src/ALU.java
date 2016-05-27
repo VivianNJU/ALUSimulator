@@ -552,7 +552,7 @@ public class ALU {
 			}
 		}
 		
-		System.out.println(rAndq);
+//		System.out.println(rAndq);
 		
 		if(rAndq.charAt(0)==operand2.charAt(0)){
 			rAndq = integerSubtraction(rAndq.substring(0,length), operand2, length).substring(1)+rAndq.substring(length);
@@ -563,13 +563,17 @@ public class ALU {
 		String quotient = rAndq.substring(length);
 		String reminder = rAndq.substring(0,length);		
 		
+		//若余数和被除数符号不同，当余数与除数符号相同，减法，否则加法
 		if(reminder.charAt(0)==operand2.charAt(0)){
-			reminder = integerSubtraction(reminder,operand2,length).substring(1);
+			if(reminder.charAt(0)!=operand1.charAt(0)){
+				reminder = integerSubtraction(reminder,operand2,length).substring(1);
+			}
 			quotient = quotient.substring(1)+"1";
 		}else{
-			reminder = integerAddition(reminder,operand2,length).substring(1);
+			if(reminder.charAt(0)!=operand1.charAt(0))
+				reminder = integerAddition(reminder,operand2,length).substring(1);
 			quotient = quotient.substring(1)+"0";
-			System.out.println(reminder);
+//			System.out.println(reminder);
 		}
 		
 		//如果商和除数符号相反，商加1
@@ -595,12 +599,45 @@ public class ALU {
 	public String signedAddition (String operand1, String operand2, int length) {
 		// TODO YOUR CODE HERE.
 		String result = "";
+		
+		//若两个都为正数，直接当做补码运算
 		if(operand1.charAt(0)=='0'&&operand2.charAt(0)=='0'){
+			//length位的无符号整数，不可能溢出
 			result = integerAddition(operand1,operand2,length);
-			return result.charAt(0)+"0"+result.substring(1);
-		}else if(operand1.charAt(0)=='1'&&operand2.charAt(0)=='0'){
-			result = integerAddition(operand2,"0"+operand1.substring(1),length);
-			return result.charAt(0)+result.charAt(1)+result.substring(1);
+			return "00"+result.substring(1);
+		}
+		
+		//若第一个是负数，第二个是正数，当做第二个数减第一个数
+		else if(operand1.charAt(0)=='1'&&operand2.charAt(0)=='0'){
+			//length位的无符号整数，正数减去正数不可能溢出
+			result = integerSubtraction(operand2,"0"+operand1.substring(1),length);
+			String num = result.substring(1);
+			//如果结果为负数，去除符号位，取反加一
+			if(result.charAt(0)=='1'){
+				num = negation(num);
+				num = oneAdder(num).substring(1);
+			}
+			return "0"+result.charAt(1)+num;
+		}
+		
+		//若第一个是正数，第二个是负数，当做第一个数减第二个数
+		else if(operand1.charAt(0)=='0'&&operand2.charAt(0)=='1'){
+			//length位的无符号整数，正数减去正数不可能溢出
+			result = integerSubtraction(operand1,"0"+operand2.substring(1),length);
+			String num = result.substring(1);
+			//如果结果为负数，去除符号位，取反加一
+			if(result.charAt(0)=='1'){
+				num = negation(num);
+				num = oneAdder(num).substring(1);
+			}
+			return "0"+result.charAt(1)+num;
+		}
+		
+		//若两个都是负数，当做第一个数加第二个数，符号位为1
+		else if(operand1.charAt(0)=='1'&&operand2.charAt(0)=='1'){
+			//length位的无符号整数，正数加正数不可能溢出
+			result = integerAddition("0"+operand1.substring(1),"0"+operand2.substring(1),length);
+			return "01"+result.substring(1);
 		}
 		return null;
 	}
@@ -617,7 +654,106 @@ public class ALU {
 	 */
 	public String floatAddition (String operand1, String operand2, int eLength, int sLength, int gLength) {
 		// TODO YOUR CODE HERE.
-		return null;
+		String expo1 = operand1.substring(1,eLength+1);
+		String expo2 = operand2.substring(1,eLength+1);
+		String sign1 = operand1.substring(eLength+1);
+		String sign2 = operand2.substring(eLength+1);
+		String symbol1 = ""+operand1.charAt(0);
+		String symbol2 = ""+operand2.charAt(0);
+		
+		//扩展出保护位，sign的长度现在为sLength+gLength
+		for(int i = 0;i<gLength;i++){
+			sign1 +="0";
+			sign2 +="0";
+		}
+		
+		//如果有一个数为正负0，那么答案即为另一个数
+		if(floatTrueValue(operand1, eLength, sLength) == "0.0"||floatTrueValue(operand1, eLength, sLength)=="-0.0")
+			return "0"+operand2;  // x == 0, return y
+		else if(floatTrueValue(operand2, eLength, sLength) == "0.0"||floatTrueValue(operand2, eLength, sLength) == "-0.0")
+			return "0"+operand1; // y == 0, return x
+		
+		if(expo1!=expo2){
+
+			//如果操作数1的指数比操作数2的大，操作数2的尾数右移、指数加1
+			if(Integer.parseInt(integerTrueValue("0"+expo1))>Integer.parseInt(integerTrueValue("0"+expo2))){
+				while(Integer.parseInt(integerTrueValue("0"+expo1))-Integer.parseInt(integerTrueValue("0"+expo2))!=0){
+					sign2 = logRightShift(sign2,1);
+					//如果操作数2的尾数变成0，答案为操作数1
+					if(Integer.parseInt(sign2)==0){
+						return "0"+operand1;
+					}
+					
+					expo2 = oneAdder(expo2).substring(1);
+				}
+			}else{//如果操作数2的指数比操作数1的大，操作数1的尾数右移、指数加1
+				while(Integer.parseInt(integerTrueValue("0"+expo2))-Integer.parseInt(integerTrueValue("0"+expo1))!=0){
+					sign1 = logRightShift(sign1,1);
+					//如果操作数1的尾数变成0，答案为操作数2
+					if(Integer.parseInt(integerTrueValue(sign1))==0){
+						return "0"+operand2;
+					}
+					
+					expo1 = oneAdder(expo1).substring(1);
+				}
+			}			
+		}
+		
+		char hide = '1';//隐藏位初始为1
+		if(Integer.parseInt(integerTrueValue(expo1))==0){
+			hide = '0';
+		}
+		
+		String expo = expo1;
+		String significand = "";
+		
+		//尾数相加，length为4的倍数
+		int length = ((2+sLength+gLength)/4+1)*4;
+		//sum是1位符号位，1+sLength+gLength位的无符号尾数
+		String sum = this.signedAddition(symbol1+hide+sign1,symbol2+hide+sign2 , length);
+		String result = sum.substring(length-2-gLength-sLength,length-gLength);//长度为2+sLength
+		char symbol = sum.charAt(0);
+		
+		//如果结果为0，返回0
+		if(Integer.parseInt(integerTrueValue(sum))==0){
+			return "0"+integerRepresentation("0", 1+eLength+sLength);
+		}
+		
+//		System.out.println(result);
+		//如果尾数之和溢出，那么指数加1，尾数右移，并判断指数是否溢出
+		if(result.charAt(0)!='0'){
+			
+			significand = result.substring(1);
+			expo = oneAdder(expo);
+			//如果指数溢出，返回溢出报告
+			if(expo.charAt(0)=='1'){
+				return "1"+expo.substring(1)+significand.substring(0,sLength);
+			}
+			expo = expo.substring(1);
+		}else{
+			significand = result.substring(1);
+		}
+		
+		
+		// 隐藏位为 0，需要左移尾数至隐藏位为 1
+//		System.out.println(significand);
+		if(significand.charAt(0) == '0'){
+			
+			int exponent = Integer.parseInt(integerTrueValue(expo));
+			//当隐藏位为0时，尾数左移，指数减1
+			while(significand.charAt(0)!='1'){
+				significand = leftShift(significand, 1);
+				exponent = exponent - 1;
+				if(exponent<0){
+					return "1"+integerRepresentation(Integer.toString(exponent), eLength)+significand.substring(1);
+				}
+				expo = integerRepresentation(Integer.toString(exponent),eLength);
+			}
+		}
+		
+		significand = significand.substring(1, sLength+1);
+
+		return "0"+symbol+expo+significand;
 	}
 	
 	/**
