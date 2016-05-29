@@ -232,7 +232,7 @@ public class ALU {
 			// 6.3.2（1）正负无穷大的情况
 			if(f == 0.0){
 				if(symbol.equals("-"))
-					return  "-Inf";
+					return "-Inf";
 				else
 					return "+Inf";//必须有正号
 			}
@@ -273,12 +273,11 @@ public class ALU {
 	 */
 	public String leftShift (String operand, int n) {
 		// TODO YOUR CODE HERE.
-		String result = "";
-		for(int i = operand.length()-1;i>n-1;i--){
-			result = operand.charAt(i)+result;
-		}
-		for(int i = 0;i<n;i++){
-			result = result+"0";
+		String result = operand;
+		int length = operand.length()-1;
+		while(n!=0){
+			result = result.substring(1)+"0";
+			n--;
 		}
 		return result;
 	}
@@ -292,12 +291,11 @@ public class ALU {
 	 */
 	public String logRightShift (String operand, int n) {
 		// TODO YOUR CODE HERE.
-		String result = "";
-		for(int i = operand.length()-n-1;i>=0;i--){
-			result = operand.charAt(i)+result;
-		}
-		for(int i = 0;i<n;i++){
-			result = "0"+result;
+		String result = operand;
+		int length = operand.length()-1;
+		while(n!=0){
+			result = "0"+result.substring(0,length);
+			n--;
 		}
 		return result;
 	}
@@ -311,12 +309,12 @@ public class ALU {
 	 */
 	public String ariRightShift (String operand, int n) {
 		// TODO YOUR CODE HERE.
-		String result = "";
-		for(int i = operand.length()-n-1;i>=0;i--){
-			result = operand.charAt(i)+result;
-		}
-		for(int i = 0;i<n;i++){
-			result = operand.charAt(0)+result;
+		char symbol = operand.charAt(0);
+		String result = operand;
+		int length = operand.length()-1;
+		while(n!=0){
+			result = symbol+result.substring(0,length);
+			n--;
 		}
 		return result;
 	}
@@ -531,11 +529,21 @@ public class ALU {
 	 */
 	public String integerDivision (String operand1, String operand2, int length) {
 		// TODO YOUR CODE HERE.
+		if(integerTrueValue(operand1)=="0"){
+			String result = "";
+			for(int i = 0;i<2*length+1;i++){
+				result += "0";
+			}
+			return result;
+		}else if(integerTrueValue(operand2)=="0"){
+			
+		}
 		String rAndq = operand1;
 		for(int i = 0;i<length*2-operand1.length();i++){
 			rAndq = operand1.charAt(0)+rAndq;
 		}//扩展出2n位，存在余数寄存器和商寄存器中
 //		System.out.println(rAndq);
+		char overflow = '0';
 		
 		for(int i = 0;i<length;i++){
 			//如果余数寄存器中的数与除数符号相同，做减法
@@ -584,7 +592,7 @@ public class ALU {
 //		System.out.println(quotient);
 
 		//溢出位+商+余数
-		return quotient+reminder;
+		return overflow+quotient+reminder;
 	}
 	
 	/**
@@ -656,8 +664,17 @@ public class ALU {
 		// TODO YOUR CODE HERE.
 		String expo1 = operand1.substring(1,eLength+1);
 		String expo2 = operand2.substring(1,eLength+1);
-		String sign1 = operand1.substring(eLength+1);
-		String sign2 = operand2.substring(eLength+1);
+		char hide1 = '1';//隐藏位初始为1
+		char hide2 = '1';
+		if(Integer.parseInt(integerTrueValue(expo1))==0){
+			hide1 = '0';
+		}
+		if(Integer.parseInt(integerTrueValue(expo2))==0){
+			hide1 = '0';
+		}
+		
+		String sign1 = hide1+operand1.substring(eLength+1);
+		String sign2 = hide2+operand2.substring(eLength+1);
 		String symbol1 = ""+operand1.charAt(0);
 		String symbol2 = ""+operand2.charAt(0);
 		
@@ -699,40 +716,41 @@ public class ALU {
 			}			
 		}
 		
-		char hide = '1';//隐藏位初始为1
-		if(Integer.parseInt(integerTrueValue(expo1))==0){
-			hide = '0';
-		}
 		
 		String expo = expo1;
 		String significand = "";
 		
+//		System.out.println(sign2);
 		//尾数相加，length为4的倍数
 		int length = ((2+sLength+gLength)/4+1)*4;
 		//sum是1位符号位，1+sLength+gLength位的无符号尾数
-		String sum = this.signedAddition(symbol1+hide+sign1,symbol2+hide+sign2 , length);
-		String result = sum.substring(length-2-gLength-sLength,length-gLength);//长度为2+sLength
+		//sum长度为length+2
+		String sum = this.signedAddition(symbol1+sign1,symbol2+sign2 , length);
+		String result = sum.substring(length-gLength-sLength,length+2);
+		//长度为2+sLength，第一位检查溢出，第二位隐藏位，剩余sLength+gLength位是尾数
+//		System.out.println(result);
 		char symbol = sum.charAt(0);
 		
 		//如果结果为0，返回0
-		if(Integer.parseInt(integerTrueValue(sum))==0){
+		if(Integer.parseInt(integerTrueValue(result))==0){
 			return "0"+integerRepresentation("0", 1+eLength+sLength);
 		}
 		
 //		System.out.println(result);
-		//如果尾数之和溢出，那么指数加1，尾数右移，并判断指数是否溢出
+		//如果尾数之和溢出，那么指数加1，尾数右移，并判断指数是否溢出	
 		if(result.charAt(0)!='0'){
 			
-			significand = result.substring(1);
 			expo = oneAdder(expo);
+//			System.out.println(expo);
+			result = logRightShift(result, 1);
 			//如果指数溢出，返回溢出报告
 			if(expo.charAt(0)=='1'){
-				return "1"+expo.substring(1)+significand.substring(0,sLength);
+				return "1"+expo.substring(1)+significand.substring(1,sLength+1);
 			}
 			expo = expo.substring(1);
-		}else{
-			significand = result.substring(1);
 		}
+		significand = result.substring(1);
+		
 		
 		
 		// 隐藏位为 0，需要左移尾数至隐藏位为 1
@@ -744,8 +762,8 @@ public class ALU {
 			while(significand.charAt(0)!='1'){
 				significand = leftShift(significand, 1);
 				exponent = exponent - 1;
-				if(exponent<0){
-					return "1"+integerRepresentation(Integer.toString(exponent), eLength)+significand.substring(1);
+				if(exponent==0){
+					return "0"+integerRepresentation(Integer.toString(exponent), eLength)+significand.substring(1,sLength+1);
 				}
 				expo = integerRepresentation(Integer.toString(exponent),eLength);
 			}
@@ -768,7 +786,10 @@ public class ALU {
 	 */
 	public String floatSubtraction (String operand1, String operand2, int eLength, int sLength, int gLength) {
 		// TODO YOUR CODE HERE.
-		return null;
+		char symbol2 = (char) ('1'-operand2.charAt(0)+'0');
+		operand2 = symbol2+operand2.substring(1);
+		String result = floatAddition(operand1, operand2, eLength, sLength, gLength);
+		return result;
 	}
 	
 	/**
@@ -782,7 +803,118 @@ public class ALU {
 	 */
 	public String floatMultiplication (String operand1, String operand2, int eLength, int sLength) {
 		// TODO YOUR CODE HERE.
-		return null;
+		
+		int expo1 = Integer.parseInt(integerTrueValue("0"+operand1.substring(1,1+eLength))); 
+		int expo2 = Integer.parseInt(integerTrueValue("0"+operand2.substring(1,1+eLength)));
+		int bias = (int)(Math.pow(2, eLength-1) - 1);
+		
+		char hide1 = '1';//隐藏位初始为1
+		char hide2 = '1';
+		if(expo1==0){
+			hide1 = '0';
+		}
+		if(expo2==0){
+			hide1 = '0';
+		}
+		
+		String sign1 = hide1+operand1.substring(eLength+1);
+		String sign2 = hide2+operand2.substring(eLength+1);
+//		System.out.println(sign1);
+		
+		char symbol = '0';
+		if(operand1.charAt(0)!=operand2.charAt(0)){
+			symbol = '1';
+		}
+		
+		//检查两个操作数是否为0，若有0则返回0
+		if(floatTrueValue(operand1, eLength, sLength) == "0.0"||floatTrueValue(operand1, eLength, sLength)=="-0.0"
+				||floatTrueValue(operand2, eLength, sLength) == "0.0"||floatTrueValue(operand2, eLength, sLength) == "-0.0"){
+			String result = "";
+			for(int i = 0;i<1+eLength+sLength;i++){
+				result += "0";
+			}
+			return symbol+result;
+		}
+		
+		//指数相加，减去偏值
+		int exponent = expo1 + expo2 - bias;
+		
+		//如果指数上溢，返回无穷
+		if(exponent > Math.pow(2, eLength)-1){
+			String expo = "";
+			String sign = "";
+			for(int i = 0;i<eLength;i++){
+				expo += "1";
+			}
+			for(int i = 0;i<sLength;i++){
+				sign += "0";
+			}
+			
+			return "1"+symbol+expo+sign;
+		}
+		//指数下溢返回0
+		else if(exponent < 0){
+			String symAndSign = "";
+			for(int i = 0;i<eLength+sLength;i++){
+				symAndSign += "0";
+			}
+			
+			return "0"+symbol+symAndSign;
+		}
+		
+		//尾数相乘
+		String significand = sign2;
+		int length = ((1+sLength)/4+1)*4-1;
+		//将操作数2的尾数扩展为2*length位
+		for(int i = 0;i<2*length-sign2.length();i++){
+			significand = "0"+significand;
+		}
+		//相乘
+		for(int i = length-1;i>=0;i--){
+			if(significand.charAt(2*length-1)=='1'){
+				significand = integerAddition("0"+significand.substring(0, length), "0"+sign1, length+1).substring(2)+significand.substring(length);
+			}
+			
+			significand = logRightShift(significand, 1);
+//			System.out.println(significand);
+		}
+		
+		significand = significand.substring(length-sLength+1,2*length);
+		
+		//规则化
+		if(significand.charAt(0)=='1'){
+			exponent ++;
+			//如果指数上溢，报告无穷
+			if(exponent > Math.pow(2, eLength)-1){
+				String expo = "";
+				String sign = "";
+				for(int i = 0;i<eLength;i++){
+					expo += "1";
+				}
+				for(int i = 0;i<sLength;i++){
+					sign += "0";
+				}
+				
+				return "1"+symbol+expo+sign;
+			}
+		}	
+		significand = leftShift(significand, 1);
+		
+		while(significand.charAt(0)!='1'){
+			exponent --;
+			significand = leftShift(significand, 1);
+			if(exponent==0){
+				String expo = integerRepresentation("0", eLength);
+				String sign = significand.substring(1,1+sLength);
+				return "0"+symbol+expo+sign;
+			}
+		}
+//		System.out.println(significand);
+		
+		String expo = integerRepresentation(Integer.toString(exponent), eLength+1).substring(1);
+		String sign = significand.substring(1,1+sLength);
+		return "0"+symbol+expo+sign;
+
 	}
 	
 	/**
@@ -796,6 +928,119 @@ public class ALU {
 	 */
 	public String floatDivision (String operand1, String operand2, int eLength, int sLength) {
 		// TODO YOUR CODE HERE.
-		return null;
+		int expo1 = Integer.parseInt(integerTrueValue("0"+operand1.substring(1,1+eLength))); 
+		int expo2 = Integer.parseInt(integerTrueValue("0"+operand2.substring(1,1+eLength)));
+		int bias = (int)(Math.pow(2, eLength-1) - 1);
+		
+		char hide1 = '1';//隐藏位初始为1
+		char hide2 = '1';
+		if(expo1==0){
+			hide1 = '0';
+		}
+		if(expo2==0){
+			hide1 = '0';
+		}
+		
+		String sign1 = hide1+operand1.substring(eLength+1);
+		String sign2 = hide2+operand2.substring(eLength+1);
+//		System.out.println(sign1);
+		
+		char symbol = '0';
+		if(operand1.charAt(0)!=operand2.charAt(0)){
+			symbol = '1';
+		}
+		
+		//如果被除数为正负0，那么答案即为0
+		if(floatTrueValue(operand1, eLength, sLength) == "0.0"||floatTrueValue(operand1, eLength, sLength)=="-0.0"){
+			String result = "";
+			for(int i = 0;i<1+eLength+sLength;i++){
+				result += "0";
+			}
+			return "0"+symbol+result;
+		}
+		//如果除数为0，答案为无穷
+		else if(floatTrueValue(operand2, eLength, sLength) == "0.0"||floatTrueValue(operand2, eLength, sLength) == "-0.0"){
+			String expo = "";
+			String sign = "";
+			for(int i = 0;i<eLength;i++){
+				expo += "1";
+			}
+			for(int i = 0;i<sLength;i++){
+				sign += "0";
+			}
+			
+			return "0"+symbol+expo+sign;
+		}
+		
+		//指数相减，加上偏值
+		int exponent = expo1 - expo2 + bias;
+		
+		//如果指数上溢，返回无穷
+		if(exponent > Math.pow(2, eLength)-1){
+			String expo = "";
+			String sign = "";
+			for(int i = 0;i<eLength;i++){
+				expo += "1";
+			}
+			for(int i = 0;i<sLength;i++){
+				sign += "0";
+			}
+			
+			return "1"+symbol+expo+sign;
+		}
+		//指数下溢返回0
+		else if(exponent < 0){
+			String symAndSign = "";
+			for(int i = 0;i<eLength+sLength;i++){
+				symAndSign += "0";
+			}
+			
+			return "0"+symbol+symAndSign;
+		}
+		
+		String significand = sign1;
+		int length = ((1+sLength)/4+1)*4-1;
+		//两数相除
+		for(int i = 0;i<length-sign1.length();i++){
+			significand = "0"+significand;
+		}
+		
+		for(int i = 0;i<length;i++){
+			significand = significand+"0";
+		}
+		
+//		System.out.println(significand);
+		
+		for(int i = 0;i<length;i++){
+//			System.out.println(significand);
+			String reminder = significand.substring(0, length);
+			char c = '0';
+			//如果够减，就减
+			String temp = integerSubtraction("0"+reminder, "0"+sign2, length+1).substring(2);
+			if(Integer.parseInt(integerTrueValue(temp))>=0){
+				reminder = temp;
+				c = '1';
+			}
+			significand = reminder+significand.substring(length, length*2);
+			significand = significand.substring(1)+c;
+			
+		}
+		
+		significand = significand.substring(length,2*length);
+//		System.out.println(significand);
+		
+		while(significand.charAt(0)!='1'){
+			exponent --;
+			significand = leftShift(significand, 1);
+			if(exponent==0){
+				String expo = integerRepresentation("0", eLength);
+				String sign = significand.substring(1,1+sLength);
+				return "0"+symbol+expo+sign;
+			}
+		}
+		
+		String expo = integerRepresentation(Integer.toString(exponent), eLength+1).substring(1);
+		String sign = significand.substring(1,1+sLength);
+		return "0"+symbol+expo+sign;
 	}
 }
